@@ -1,0 +1,165 @@
+
+import pyodbc as py
+import numpy as np
+import sqlalchemy as sq
+import bs4 
+import requests as rq
+import pandas as pd
+import time as t
+import datetime 
+import random
+i,links,tab_list,table_full,table,l,f=1,[],[],[],[],1,0
+while  l<3:
+    t_set=lable=random.randrange(1,2)
+    links=[]
+    main=rq.get('http://turbo.az/autos'+'?page='+str(l))
+    ss=bs4.BeautifulSoup(main.text,'lxml')
+    link=ss.find_all('a',{'class':"products-i-link"})
+    for f in link:
+        links.append(f.get('href'))    
+    print('Page: '+str(l), datetime.datetime.now())
+    t.sleep(t_set)
+    i=1
+#######################################################    
+    while i<len(links):
+        table=[]
+        res=rq.get('http://turbo.az'+links[i])
+        soup=bs4.BeautifulSoup(res.text,'lxml')
+        name=soup.find('div',{'class':"seller-name"})  
+        tel=soup.find_all('a',{'class':"phone"}) 
+        date=soup.find_all('div',{'class':"product-statistics"})
+        data=soup.find_all('div',{'class':"product-properties-value"})
+        table.append(data[0].text)
+        table.append(data[1].text)
+        table.append(data[2].text)
+        table.append(data[3].text)
+        table.append(data[4].text)
+        table.append(data[5].text)
+        table.append(data[6].text)
+        table.append(data[7].text)
+        table.append(data[8].text)
+        table.append(data[9].text)
+        table.append(data[10].text)
+        table.append(data[11].text)
+        table.append(data[12].text)
+        table.append(data[13].text)
+        table.append(name)
+        table.append(tel)
+        table.append(date[0].text)
+        table_full.append(table)
+        print(str(i)+': ', datetime.datetime.now())
+        i=i+1
+        t.sleep(t_set)
+    from gc import  collect
+    collect()
+    city=[]
+    for i in range(0,len(table_full)):
+        city.append(table_full[i][0])
+    marka=[]
+    for i in range(0,len(table_full)):
+        marka.append(table_full[i][1])   
+    model=[]
+    for i in range(0,len(table_full)):
+        model.append(table_full[i][2])    
+    il=[]
+    for i in range(0,len(table_full)):
+        il.append(table_full[i][3])
+    ban=[]
+    for i in range(0,len(table_full)):
+        ban.append(table_full[i][4])
+    reng=[]
+    for i in range(0,len(table_full)):
+        reng.append(table_full[i][5])
+    motor_hecm=[]
+    for i in range(0,len(table_full)):
+        motor_hecm.append(table_full[i][6])
+    motor_guc=[]
+    for i in range(0,len(table_full)):
+        motor_guc.append(table_full[i][7])
+    yanacaq_nov=[]
+    for i in range(0,len(table_full)):
+        yanacaq_nov.append(table_full[i][8])
+    probeq=[]
+    for i in range(0,len(table_full)):
+        probeq.append(table_full[i][9])
+    qutu=[]
+    for i in range(0,len(table_full)):
+        qutu.append(table_full[i][10])
+    oturucu=[]
+    for i in range(0,len(table_full)):
+        oturucu.append(table_full[i][11])
+    status=[]
+    for i in range(0,len(table_full)):
+        status.append(table_full[i][12])
+    cost=[]
+    for i in range(0,len(table_full)):
+        cost.append(table_full[i][13])
+    name=[]
+    for i in range(0,len(table_full)):
+        name.append(table_full[i][14])
+    phone=[]
+    for i in range(0,len(table_full)):
+        phone.append(table_full[i][15])
+    date_info=[]
+    for i in range(0,len(table_full)):
+        date_info.append(table_full[i][16])
+    ##########################################################    
+    table_df = pd.DataFrame({'Load_date': datetime.datetime.now(),'City':city, 'Marka':marka,'Model':model,'IL' :il,'Ban':ban,
+                       'Reng':reng, 'Motor_hecm':motor_hecm,'Motor_guc':motor_guc,
+                       'Yanacaq_nov':yanacaq_nov,'Probeq':probeq,'Qutu': qutu,
+                       'Oturucu' : oturucu, 'Status':status,'Cost':cost,'Name': name,
+                       'Phone':phone,'Date_info':date_info})
+    table_full=[]
+    ###############################################################################
+    dd=table_df['Phone'].astype(str)
+    tt=dd.str.replace('<a class="phone" href="tel:','')
+    yy=tt.str.replace('</a>','')
+    ff=yy.str.replace('[','')
+    hh=ff.str.replace(']','')
+    table_df['Phone']=hh.str.replace('"','')
+    #######################################################
+    nn=table_df['Name'].astype(str)
+    tt=nn.str.replace('<div class="seller-name"><p>','')
+    table_df['Name']=tt.str.replace('</p></div>','')
+    #######################################################
+    engine=sq.create_engine('sqlite:///C:/DB_test.db')   #burada oz database melumatini qeyd et
+    table_df.to_sql('table_data',con=engine,if_exists='append')
+    l=l+1
+##############################
+engine=sq.create_engine('sqlite:///C:/DB_test.db')  #burada oz database melumatini qeyd et
+connection=engine.connect()
+###
+scr="""delete from AUTO_INFO"""
+sor="""insert into AUTO_INFO 
+select [index],Load_date,Ban,City,Cost,Date_info,IL,Marka,Model,Yanacaq_nov,
+Motor_guc,Motor_hecm,upper(Name) as Name ,Oturucu,Probeq,Qutu,Reng,Status,
+cast(
+	trim(substr(date_info,instr(date_info,'Baxışların sayı:')+length('Baxışların sayı:'),
+	instr(date_info,'Yeniləndi:')-(instr(date_info,'Baxışların sayı:')+length('Baxışların sayı:')) )
+		) as integer) views,
+	trim(substr(date_info,instr(date_info,'Yeniləndi:')+length('Yeniləndi:'),
+	instr(date_info,'Elanın nömrəsi:')-(instr(date_info,'Yeniləndi:')+length('Yeniləndi:')) )
+		) update_date,
+	substr(date_info,instr(date_info,'Elanın nömrəsi:')+length('Elanın nömrəsi:'),10) Elan_no,
+	substr(replace(replace(replace(replace(substr(phone,instr(phone,'>')+1,
+length(phone)-instr(phone,'>')),')',''),'(',''),'-',''),' ','')
+,2,9)Phone	
+ from table_data"""
+delete_p=connection.execute(scr)
+insert_p=connection.execute(sor)
+###
+
+connection=engine.connect()
+stmt='select * from auto_info'
+result_proxy=connection.execute(stmt)
+results=result_proxy.fetchall()
+auto_table=pd.DataFrame(results)
+
+table_df = pd.DataFrame({'Load_date': auto_table[1],'City':auto_table[3], 'Marka':auto_table[7],'Model':auto_table[8],
+                         'IL' :auto_table[6],'Ban':auto_table[2],'Reng':auto_table[16], 'Motor_hecm':auto_table[11],
+                         'Motor_guc':auto_table[10],'Yanacaq_nov':auto_table[9],'Probeq':auto_table[14],'Qutu': auto_table[15],
+                         'Views':auto_table[18],'Oturucu' : auto_table[13], 'Status':auto_table[17],'Cost':auto_table[4],
+                         'Phone':auto_table[21],'Date_info':auto_table[5],'Elan_no':auto_table[20],
+                         'Update_date':auto_table[19]})
+table_df.to_csv('C:\\auto_info.txt', sep=',',index=None,encoding='utf-8',line_terminator =",")
+print('SUCCESFULL')
